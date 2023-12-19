@@ -1,0 +1,1 @@
+from .barthelIndex import BarthelIndex

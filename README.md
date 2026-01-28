@@ -1,7 +1,6 @@
 # MSD — Medical Sensor Data Platform (Parkinson’s Finger-Movement Monitoring)
 
-MSD is a prototype platform for collecting, validating, and visualizing medical sensor measurements for Parkinson’s patients.  
-It focuses on **standard-compliant data exchange (HL7 FHIR)** and **3D visualization** of finger-movement sensor data to support clinical workflows.
+MSD is a hospital-staff platform for validating and visualizing medical sensor measurements for Parkinson’s patients. The core focus is **standard-compliant data exchange (HL7 FHIR)** and a **3D visualization** of finger-movement sensor data to support clinical workflows.
 
 Repository: https://github.com/elalawani/MSD
 
@@ -9,49 +8,107 @@ Repository: https://github.com/elalawani/MSD
 
 ## What the platform does
 
-### 1) FHIR compliance validation (quality gate)
-Before sensor data is shown in the 3D viewer, it is validated against **HL7 FHIR** requirements using an open-source FHIR server (HAPI FHIR).  
-The system provides feedback when incoming data does not meet the required standard (e.g., missing fields, invalid structure).
+### 1) HL7 FHIR compliance validation (quality gate)
+Before sensor data is shown in the 3D viewer, it is checked against HL7 FHIR requirements using an open-source FHIR server (**HAPI FHIR**). The platform provides feedback if the submitted data is not compliant (e.g., missing required elements or invalid structure).
 
 ### 2) 3D visualization for clinical interpretation
-Sensor recordings (finger movement) are presented as a **3D view** to help clinicians evaluate movement characteristics relevant for Parkinson’s diagnosis and monitoring.
+Finger-movement sensor data is displayed as a **3D view** to support clinical assessment relevant for Parkinson’s diagnosis and monitoring.
 
-### 3) Patient-centered collaboration features
-When a new patient is registered, the platform automatically creates a **patient-specific chat group** and assigns the responsible staff (doctors / nurses).
+### 3) Patient-scoped collaboration workflows (hospital staff only)
+This platform is intended for **hospital staff** (no patient login). When a new patient is registered, the platform creates a **patient-specific workspace (chat group)** and assigns the responsible staff (doctors/nurses).
 
-Inside the patient group:
-- **To-Do workflow**: doctors can create patient-related tasks; nurses can “claim” a task with one click and manage it in their personal task list (status updates, completion, deletion).
-- **Questionnaires**: example implementation for the **Barthel Index**; additional questionnaires are prepared as placeholders in the UI.
-- **Vital signs & clinical measurements**: nurses can enter measurements such as blood pressure, temperature, respiration rate, heart rate, etc.
+Inside the patient workspace:
+- **Chat group** for the patient’s care team.
+- **To-Do workflow**: doctors can create To-Dos; nurses can claim a To-Do with one click and manage it in their personal To-Do list (with related information such as patient, time, place, goal). Nurses can mark tasks as done or delete them.
+- **Questionnaires**: example implementation for **Barthel Index** with PDF export; other questionnaires exist as frontend placeholders.
+- **Clinical measurements**: nurses can enter values such as blood pressure, temperature, respiration rate, heart rate, and more.
 
 ---
 
-## Architecture (high level)
+## Role-based profiles & access control (hospital staff only)
 
-- **MSD/** — Backend services (Python) and integration logic (including FHIR validation workflow)
-- **MSDV/** — Frontend (Vue) UI, including the 3D visualization view
-- **docker-compose.yml** — Local development stack orchestration
+The platform uses **role-based profiles** to separate responsibilities and reduce the risk of unauthorized actions.
 
-> Naming: MSD = “Medical Sensor Data”; MSDV = “Medical Sensor Data View” (3D visualization UI)
+### Roles
+- **Nurse**
+  - Access assigned patient workspaces.
+  - Claim and manage To-Dos in a personal task list.
+  - Enter clinical measurements (e.g., blood pressure, temperature, respiration rate, heart rate).
+  - Fill questionnaire responses (e.g., Barthel Index) and export as PDF.
+
+- **Doctor**
+  - Access assigned patient workspaces.
+  - Create and track To-Dos for a patient workspace.
+  - Review validated sensor data and use the 3D visualization view.
+
+- **Admin (staff)**
+  - Manage staff accounts and role assignment.
+  - Register new patients and assign responsible staff.
+  - Oversee operational configuration (deployment/runtime setup).
+
+### Group-based access scope
+When a new patient is registered, a **patient-specific workspace** is created and responsible staff are assigned. Access to chat, To-Dos, questionnaires, and measurements is scoped to that patient workspace.
+
+---
+
+## Accessibility (UI/UX)
+
+The UI is intended for hospital environments. Accessibility goals include:
+- Keyboard-friendly navigation for core workflows (navigation, forms, To-Dos).
+- Semantic markup and clear labeling for interactive elements.
+- Consistent validation and human-readable error messages (including FHIR validation feedback).
+- Responsive layout for common workstation screen sizes.
+
+> Note: 3D views can be challenging for assistive technologies; where possible, provide complementary text summaries (key values/metrics) alongside the visualization.
+
+---
+
+## Architecture (Docker Compose)
+
+This repository is organized as a multi-service stack orchestrated via Docker Compose:
+
+- **backend** (Django / Python) — runs on `0.0.0.0:8000`
+- **frontend** (Vue / Vite) — runs on `0.0.0.0:5173`
+- **fhir** (HAPI FHIR server) — exposed locally on `localhost:8081` (container port 8080)
+- **postgres** (PostgreSQL database) — exposed locally on `localhost:5432`
+
+---
+
+## Repository structure
+
+- `docker-compose.yml` — builds and runs all services (backend, frontend, fhir, postgres)
+- `env/` — Python virtual environment for running Django without Docker (optional)
+- `MSD/` — backend (Django/Python)
+- `MSDV/` — frontend (Vue/Vite/Tailwind)
+
+### MSD/ (Backend)
+- `requirements.txt` — Python dependencies
+- Dockerfile — backend image build instructions
+- Django project setup — `manage.py`, settings, backend modules
+
+### MSDV/ (Frontend)
+- `package.json` — frontend dependencies
+- Vite + Tailwind configuration
+- Dockerfile — frontend image build instructions
 
 ---
 
 ## Tech stack
 
-- Frontend: **Vue.js** (MSDV)
-- Backend: **Python** (MSD)
-- Standards / interoperability: **HL7 FHIR** via **HAPI FHIR server**
-- Local orchestration: **Docker Compose**
+- **Frontend**: Vue.js (Vite), Tailwind CSS
+- **Backend**: Python + Django
+- **Database**: PostgreSQL
+- **Interoperability standard**: HL7 FHIR
+- **FHIR server**: HAPI FHIR (`hapiproject/hapi:latest`)
+- **Local orchestration**: Docker Compose
 
 ---
 
-## Getting started (local)
+## Getting started (Docker)
 
 ### Prerequisites
 - Docker + Docker Compose installed
 
-### Run
+### 1) Build images
 ```bash
-git clone https://github.com/elalawani/MSD.git
-cd MSD
-docker compose up --build
+docker-compose build
